@@ -1,0 +1,9 @@
+{
+  "name": "superpowers-copilot",
+  "description": "Complete dev workflow for Copilot CLI: TDD, /fleet-native parallel agents, subagent handoffs, debugging, and more",
+  "version": "1.0.0",
+  "author": { "name": "Trent Stanton" },
+  "homepage": "https://github.com/trentstanton/superpowers-copilot",
+  "license": "MIT",
+  "keywords": ["skills", "tdd", "fleet", "subagents", "debugging", "workflows"]
+}
