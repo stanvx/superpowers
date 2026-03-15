@@ -50,7 +50,9 @@ if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
 }
 EOF
 else
-  # Other platforms (Cursor, etc.) — emit only additional_context
+  # Other platforms (Copilot CLI, Cursor, etc.) — emit only additional_context
+  # Note: For Copilot CLI, AGENTS.md provides primary session context injection.
+  # This hook output is a best-effort supplement if the platform reads additional_context.
   cat <<EOF
 {
   "additional_context": "${session_context}"
