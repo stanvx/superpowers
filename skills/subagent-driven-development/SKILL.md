@@ -185,13 +185,11 @@ Implementer: Removed --json flag, added progress reporting
 Spec reviewer: ✅ Spec compliant now
 
 [Dispatch code quality reviewer]
-Code reviewer: Strengths: Solid. Issues (Important): Magic number (100)
+Code reviewer: Strengths: Solid. Issues (Important): Magic number (100) — use a named constant.
 
-[Implementer fixes]
-Implementer: Extracted PROGRESS_INTERVAL constant
-
-[Code reviewer reviews again]
-Code reviewer: ✅ Approved
+[Surface to human — blocked]
+You (to human): "Code reviewer blocked Task 2. Issues list:
+  - Magic number 100 hardcoded — extract to named constant (PROGRESS_INTERVAL)"
 
 [Mark Task 2 complete]
 
