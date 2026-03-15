@@ -100,7 +100,7 @@ Tool name mapping table. Loaded by `using-superpowers` so all other skills impli
 | `WebSearch` | `web_search` |
 | `WebFetch` | `web_fetch` |
 
-Note: Copilot CLI tool names are nearly identical to Claude Code. The primary divergence is `TodoWrite` → `sql` (session DB), which only affects the process skills.
+Note: Copilot CLI tool names are nearly identical to Claude Code. The three name divergences are `TodoWrite` → `sql` (session DB), `WebSearch` → `web_search`, and `WebFetch` → `web_fetch`. The first only affects process skills; the latter two affect skills that do research or fetch URLs.
 
 ### 4. `skills/using-superpowers/references/copilot-workflow.md` (NEW)
 
@@ -155,9 +155,9 @@ Main agent
        └─ Implementer implements, tests, commits, self-reviews
   └─ task(spec-reviewer-prompt.md + spec + diff)
        └─ Returns: APPROVED or issues list
-  [if issues] └─ task(implementer, fix-list)
+  [if issues] └─ task(implementer, fix-list) → re-run spec-reviewer
   └─ task(code-quality-reviewer-prompt.md + diff)
-       └─ Returns: APPROVED or issues list
+       └─ Returns: APPROVED or issues list (final gate — not re-looped; surface to human if blocked)
   └─ Mark complete in sql todos table
 ```
 
@@ -172,7 +172,11 @@ Main agent
 
 ### 9. `hooks/hooks.json` (MODIFIED)
 
-Update path variable from `CLAUDE_PLUGIN_ROOT` to `COPILOT_PLUGIN_ROOT`. Event name `SessionStart` is the same in Copilot CLI.
+The `SessionStart` event name is shared with Claude Code. The `matcher` field filters which session events trigger the hook — `"startup|resume|clear|compact"` fires on new sessions, resumes, and manual context resets, matching the same moments in Claude Code.
+
+The path variable must be confirmed against the actual Copilot CLI hook execution environment during implementation. Claude Code exposes `CLAUDE_PLUGIN_ROOT`; the Copilot CLI equivalent is likely `COPILOT_PLUGIN_ROOT` but **must be verified** against the [Copilot CLI hooks documentation](https://docs.github.com/en/copilot/concepts/agents/coding-agent/about-hooks) before committing. If Copilot CLI does not expose a plugin root variable, the fallback is an absolute path resolved at install time, or relying solely on `AGENTS.md` for session-start behavior.
+
+`hooks/run-hook.cmd` is **in scope** for a one-line path variable update (same change as `hooks.json`). No other changes to that file.
 
 ```json
 {
@@ -195,12 +199,16 @@ Update path variable from `CLAUDE_PLUGIN_ROOT` to `COPILOT_PLUGIN_ROOT`. Event n
 
 ### 10. `README.md` (MODIFIED)
 
-Add Copilot CLI installation section:
+Add Copilot CLI installation section. The plugin marketplace registration is a post-implementation step. Until a marketplace is established, direct GitHub installation is used:
 
 ```
 ### GitHub Copilot CLI
 
-/plugin install superpowers-copilot@<marketplace>
+# Direct install from GitHub (before marketplace listing)
+/plugin install https://github.com/trentstanton/superpowers-copilot
+
+# Once listed on a marketplace:
+/plugin install superpowers-copilot@<marketplace-name>
 ```
 
 Plus a brief description of the Copilot CLI-specific features (`/fleet` integration, request-efficient design).
@@ -234,8 +242,8 @@ User says "go"
 
 - Changes to the 12 skills not named above
 - New skills (this is a port, not a feature addition)
-- Copilot CLI marketplace listing setup (post-implementation step)
-- Windows `run-hook.cmd` changes (hook command path update only)
+- Copilot CLI marketplace listing setup (post-implementation step; direct GitHub install used in interim)
+- Windows `run-hook.cmd` changes beyond the one-line path variable update (see Component 9)
 
 ---
 
@@ -245,5 +253,6 @@ User says "go"
 2. All 15 skills accessible via `skill` tool in a Copilot CLI session
 3. `dispatching-parallel-agents` skill explicitly guides the agent to use `/fleet`
 4. `subagent-driven-development` handoff loop works end-to-end with Copilot CLI `task` tool
-5. Session-start hook fires and invokes `using-superpowers` correctly
+5a. Session-start hook mechanism is wired correctly in `hooks.json` and `run-hook.cmd`
+5b. Hook fires and invokes `using-superpowers` correctly — contingent on `COPILOT_PLUGIN_ROOT` being confirmed; if the env var is unavailable, `AGENTS.md` serves as the verified fallback
 6. `AGENTS.md` triggers `using-superpowers` in programmatic sessions
