@@ -94,6 +94,20 @@ To update:
 gemini extensions update superpowers
 ```
 
+### GitHub Copilot CLI
+
+Install directly from GitHub:
+
+```bash
+/plugin install https://github.com/trentstanton/superpowers-copilot
+```
+
+**Copilot CLI-specific features:**
+- `/fleet`-native parallel agent dispatch via `dispatching-parallel-agents`
+- Request-efficient patterns (Copilot bills per message, not per token)
+- `sql` tool for task tracking (replaces `TodoWrite`)
+- `AGENTS.md` auto-loads the plugin on every session start
+
 ### Verify Installation
 
 Start a new session in your chosen platform and ask for something that should trigger a skill (for example, "help me plan this feature" or "let's debug this issue"). The agent should automatically invoke the relevant superpowers skill.
