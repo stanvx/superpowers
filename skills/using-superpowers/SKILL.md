@@ -31,11 +31,13 @@ If CLAUDE.md, GEMINI.md, or AGENTS.md says "don't use TDD" and a skill says "alw
 
 **In Gemini CLI:** Skills activate via the `activate_skill` tool. Gemini loads skill metadata at session start and activates the full content on demand.
 
+**In Copilot CLI:** Use the `skill` tool. Load `@skills/using-superpowers/references/copilot-cli-tools.md` for the tool name mapping and `@skills/using-superpowers/references/copilot-workflow.md` for `/fleet`, `/research`, and request-efficiency guidance.
+
 **In other environments:** Check your platform's documentation for how skills are loaded.
 
 ## Platform Adaptation
 
-Skills use Claude Code tool names. Non-CC platforms: see `references/codex-tools.md` (Codex) for tool equivalents. Gemini CLI users get the tool mapping loaded automatically via GEMINI.md.
+Skills use Claude Code tool names. Platform-specific tool mappings: see `references/codex-tools.md` (Codex) or `references/copilot-cli-tools.md` (Copilot CLI) for equivalents. Gemini CLI users get the tool mapping loaded automatically via GEMINI.md. Copilot CLI users load the mapping explicitly via the `using-superpowers` skill.
 
 # Using Skills
 
