@@ -7,176 +7,136 @@ description: Use when facing 2+ independent tasks that can be worked on without 
 
 ## Overview
 
-You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
+You dispatch independent tasks to fleet agents running in parallel. Each agent has its own context window and works concurrently. The main agent reviews and integrates results.
 
-When you have multiple unrelated failures (different test files, different subsystems, different bugs), investigating them sequentially wastes time. Each investigation is independent and can happen in parallel.
+**In Copilot CLI: use `/fleet` as the dispatch primitive.** Prefix your prompt with `/fleet` and describe each agent's task in a single message.
 
-**Core principle:** Dispatch one agent per independent problem domain. Let them work concurrently.
+**Core principle:** One problem domain per agent. No shared state. Let them work concurrently.
 
 ## When to Use
 
 ```dot
 digraph when_to_use {
-    "Multiple failures?" [shape=diamond];
+    "2+ tasks to complete?" [shape=diamond];
     "Are they independent?" [shape=diamond];
-    "Single agent investigates all" [shape=box];
-    "One agent per problem domain" [shape=box];
-    "Can they work in parallel?" [shape=diamond];
-    "Sequential agents" [shape=box];
-    "Parallel dispatch" [shape=box];
+    "Do they write to different files?" [shape=diamond];
+    "Is there a dependency seam?" [shape=diamond];
+    "Use sequential execution" [shape=box];
+    "Pattern 1: Direct /fleet" [shape=box];
+    "Pattern 2: Staged /fleet" [shape=box];
 
-    "Multiple failures?" -> "Are they independent?" [label="yes"];
-    "Are they independent?" -> "Single agent investigates all" [label="no - related"];
-    "Are they independent?" -> "Can they work in parallel?" [label="yes"];
-    "Can they work in parallel?" -> "Parallel dispatch" [label="yes"];
-    "Can they work in parallel?" -> "Sequential agents" [label="no - shared state"];
+    "2+ tasks to complete?" -> "Are they independent?" [label="yes"];
+    "2+ tasks to complete?" -> "Use sequential execution" [label="no — related"];
+    "Are they independent?" -> "Do they write to different files?" [label="yes"];
+    "Are they independent?" -> "Use sequential execution" [label="no — tightly coupled"];
+    "Do they write to different files?" -> "Is there a dependency seam?" [label="yes"];
+    "Do they write to different files?" -> "Use sequential execution" [label="no — same files"];
+    "Is there a dependency seam?" -> "Pattern 1: Direct /fleet" [label="no"];
+    "Is there a dependency seam?" -> "Pattern 2: Staged /fleet" [label="yes"];
 }
 ```
 
 **Use when:**
 - 3+ test files failing with different root causes
 - Multiple subsystems broken independently
+- Research and exploration across unrelated domains
 - Each problem can be understood without context from others
-- No shared state between investigations
+- No shared state between tasks (different files, different concerns)
 
 **Don't use when:**
-- Failures are related (fix one might fix others)
-- Need to understand full system state
-- Agents would interfere with each other
+- Tasks write to the same files (agents would conflict)
+- You need to see one result before knowing the next task
+- Tasks are related (fixing one might fix others)
+- Fewer than 2 independent domains (sequential is simpler)
 
-## The Pattern
+## Pattern 1 — Direct `/fleet` Dispatch
 
-### 1. Identify Independent Domains
+Use for 2–4 independent tasks with no dependency between them.
 
-Group failures by what's broken:
-- File A tests: Tool approval flow
-- File B tests: Batch completion behavior
-- File C tests: Abort functionality
-
-Each domain is independent - fixing tool approval doesn't affect abort tests.
-
-### 2. Create Focused Agent Tasks
-
-Each agent gets:
-- **Specific scope:** One test file or subsystem
-- **Clear goal:** Make these tests pass
-- **Constraints:** Don't change other code
-- **Expected output:** Summary of what you found and fixed
-
-### 3. Dispatch in Parallel
-
-```typescript
-// In Claude Code / AI environment
-Task("Fix agent-tool-abort.test.ts failures")
-Task("Fix batch-completion-behavior.test.ts failures")
-Task("Fix tool-approval-race-conditions.test.ts failures")
-// All three run concurrently
+**Syntax:**
+```
+/fleet [BRIEF DESCRIPTION] — Agent 1: [task 1 with full context]. Agent 2: [task 2 with full context]. Agent 3: [task 3 with full context].
 ```
 
-### 4. Review and Integrate
-
-When agents return:
-- Read each summary
-- Verify fixes don't conflict
-- Run full test suite
-- Integrate all changes
-
-## Agent Prompt Structure
-
-Good agent prompts are:
-1. **Focused** - One clear problem domain
-2. **Self-contained** - All context needed to understand the problem
-3. **Specific about output** - What should the agent return?
-
-```markdown
-Fix the 3 failing tests in src/agents/agent-tool-abort.test.ts:
-
-1. "should abort tool with partial output capture" - expects 'interrupted at' in message
-2. "should handle mixed completed and aborted tools" - fast tool aborted instead of completed
-3. "should properly track pendingToolCount" - expects 3 results but gets 0
-
-These are timing/race condition issues. Your task:
-
-1. Read the test file and understand what each test verifies
-2. Identify root cause - timing issues or actual bugs?
-3. Fix by:
-   - Replacing arbitrary timeouts with event-based waiting
-   - Fixing bugs in abort implementation if found
-   - Adjusting test expectations if testing changed behavior
-
-Do NOT just increase timeouts - find the real issue.
-
-Return: Summary of what you found and what you fixed.
+**Example:**
 ```
+/fleet Fix 3 failing test files — Agent 1: fix agent-tool-abort.test.ts — 3 timing/race condition failures, see error output: [paste errors]. Agent 2: fix batch-completion.test.ts — 2 failures, event structure mismatch, see: [paste errors]. Agent 3: fix race-conditions.test.ts — 1 failure, async wait missing, see: [paste errors].
+```
+
+Each agent works in its own context window. After all complete:
+1. Read each agent's summary
+2. Check for conflicts (did any agents edit the same files?)
+3. Run the full test suite / verify combined output
+4. Integrate any cross-agent concerns
+
+## Pattern 2 — Staged `/fleet` with Handoff
+
+Use when tasks form two waves: an independent first set whose outputs feed a second set.
+
+**Example — research then implement:**
+```
+Stage 1:
+/fleet Research two subsystems — Agent 1: research how the auth system works in src/auth/. Return key findings. Agent 2: research how the session system works in src/sessions/. Return key findings.
+
+[Wait for Stage 1 results]
+
+Stage 2:
+/fleet Implement changes using Stage 1 findings — Agent 1: add JWT refresh to auth/ using these findings: [paste Agent 1 findings]. Agent 2: add session invalidation to sessions/ using: [paste Agent 2 findings].
+```
+
+The key: Stage 2 prompt includes the actual output from Stage 1. Do not start Stage 2 until all Stage 1 agents have returned.
+
+## Writing Good Agent Prompts
+
+Each agent in a `/fleet` call needs:
+1. **Specific scope** — one test file, one subsystem, one concern
+2. **Full context** — paste error messages, relevant code snippets, and task description directly
+3. **Clear constraints** — "Do NOT change files outside src/auth/"
+4. **Expected output format** — "Return: root cause, files changed, any concerns"
+
+**❌ Bad (too vague):**
+```
+/fleet Fix all the tests — Agent 1: fix auth tests. Agent 2: fix session tests.
+```
+
+**✅ Good (specific with context):**
+```
+/fleet Fix 2 test files — Agent 1: fix src/auth/auth.test.ts — 2 failures: "token not refreshed" (line 45) and "session not invalidated" (line 89). Do NOT change production code. Return: root cause and what you changed. Agent 2: fix src/sessions/session.test.ts — 1 failure: "session.get() returns null after login" (line 23). Suspect src/sessions/store.ts:67. Return: root cause and fix.
+```
+
+## After Fleet Agents Return
+
+1. **Read each summary** — understand what changed and what was found
+2. **Check for conflicts** — did any agents touch the same files?
+3. **Verify integration** — run the full test suite or verify combined output
+4. **Spot-check critical changes** — review high-risk changes directly
 
 ## Common Mistakes
 
-**❌ Too broad:** "Fix all the tests" - agent gets lost
-**✅ Specific:** "Fix agent-tool-abort.test.ts" - focused scope
+**❌ Shared state:** Agent 1 edits `config.ts` and Agent 2 also edits `config.ts` → conflict  
+**✅ Isolate:** Break into sequential tasks if they share files
 
-**❌ No context:** "Fix the race condition" - agent doesn't know where
-**✅ Context:** Paste the error messages and test names
+**❌ No context:** "Fix the race condition" → agent doesn't know where  
+**✅ Context:** Paste the error, the test name, the file path
 
-**❌ No constraints:** Agent might refactor everything
-**✅ Constraints:** "Do NOT change production code" or "Fix tests only"
+**❌ Vague output:** "Fix it" → you don't know what changed  
+**✅ Specific:** "Return: root cause, files changed, what you fixed"
 
-**❌ Vague output:** "Fix it" - you don't know what changed
-**✅ Specific:** "Return summary of root cause and changes"
+**❌ Dependent tasks in one fleet call:** Agent 2 needs Agent 1's output  
+**✅ Staged:** Use Pattern 2 — wait for Stage 1 before dispatching Stage 2
 
-## When NOT to Use
+## Real Example
 
-**Related failures:** Fixing one might fix others - investigate together first
-**Need full context:** Understanding requires seeing entire system
-**Exploratory debugging:** You don't know what's broken yet
-**Shared state:** Agents would interfere (editing same files, using same resources)
+**Scenario:** 6 test failures across 3 files after a major refactoring
 
-## Real Example from Session
-
-**Scenario:** 6 test failures across 3 files after major refactoring
-
-**Failures:**
-- agent-tool-abort.test.ts: 3 failures (timing issues)
-- batch-completion-behavior.test.ts: 2 failures (tools not executing)
-- tool-approval-race-conditions.test.ts: 1 failure (execution count = 0)
-
-**Decision:** Independent domains - abort logic separate from batch completion separate from race conditions
-
-**Dispatch:**
+**Fleet call:**
 ```
-Agent 1 → Fix agent-tool-abort.test.ts
-Agent 2 → Fix batch-completion-behavior.test.ts
-Agent 3 → Fix tool-approval-race-conditions.test.ts
+/fleet Fix 3 test files — Agent 1: fix agent-tool-abort.test.ts (3 timing failures, errors: [paste]). Agent 2: fix batch-completion-behavior.test.ts (2 failures, event structure errors: [paste]). Agent 3: fix tool-approval-race-conditions.test.ts (1 failure, async count: [paste]).
 ```
 
 **Results:**
 - Agent 1: Replaced timeouts with event-based waiting
-- Agent 2: Fixed event structure bug (threadId in wrong place)
+- Agent 2: Fixed event structure bug (threadId in wrong location)
 - Agent 3: Added wait for async tool execution to complete
 
 **Integration:** All fixes independent, no conflicts, full suite green
-
-**Time saved:** 3 problems solved in parallel vs sequentially
-
-## Key Benefits
-
-1. **Parallelization** - Multiple investigations happen simultaneously
-2. **Focus** - Each agent has narrow scope, less context to track
-3. **Independence** - Agents don't interfere with each other
-4. **Speed** - 3 problems solved in time of 1
-
-## Verification
-
-After agents return:
-1. **Review each summary** - Understand what changed
-2. **Check for conflicts** - Did agents edit same code?
-3. **Run full suite** - Verify all fixes work together
-4. **Spot check** - Agents can make systematic errors
-
-## Real-World Impact
-
-From debugging session (2025-10-03):
-- 6 failures across 3 files
-- 3 agents dispatched in parallel
-- All investigations completed concurrently
-- All fixes integrated successfully
-- Zero conflicts between agent changes
