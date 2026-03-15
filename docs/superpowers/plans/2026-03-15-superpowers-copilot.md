@@ -21,7 +21,8 @@
 | `skills/using-superpowers/SKILL.md` | MODIFY | Add "In Copilot CLI" subsection + update Platform Adaptation |
 | `skills/dispatching-parallel-agents/SKILL.md` | MODIFY (deep rewrite) | Replace Task() patterns with /fleet Patterns 1 and 2 |
 | `skills/subagent-driven-development/SKILL.md` | MODIFY | TodoWrite→sql, code-quality-reviewer is final gate (not re-looped), request-efficiency note |
-| `hooks/hooks.json` | MODIFY | CLAUDE_PLUGIN_ROOT → COPILOT_PLUGIN_ROOT (verify env var first) |
+| `hooks/hooks.json` | NO CHANGE | Verified: COPILOT_PLUGIN_ROOT does not exist in Copilot CLI. Changing CLAUDE_PLUGIN_ROOT would break Claude Code. Copilot CLI uses .github/hooks/ format instead. |
+| `.github/hooks/session-start.json` | CREATE | Copilot CLI native hook format (version:1, sessionStart, bash/powershell) |
 | `hooks/session-start` | MODIFY | Add Copilot CLI detection branch |
 | `README.md` | MODIFY | Add Copilot CLI install section |
 
@@ -651,7 +652,15 @@ Tasks 8–9: hooks wiring (with verification step) and README update.
 
 **Note on `hooks/run-hook.cmd`:** The spec (Component 9) mentions `run-hook.cmd` is "in scope for a one-line path variable update (same change as hooks.json)." After inspecting the file, **no change is needed** — `run-hook.cmd` uses self-relative paths (`HOOK_DIR=%~dp0` on Windows, `SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"` on Unix) and does not reference `CLAUDE_PLUGIN_ROOT` at all. The spec's assumption was incorrect. `run-hook.cmd` is confirmed out of scope.
 
-- [ ] **Step 1: Verify Copilot CLI hook env var and output format**
+- [x] **Step 1: Verify Copilot CLI hook env var and output format**
+
+**Step 1 findings (verified 2026-03-15):**
+- Copilot CLI does NOT use `COPILOT_PLUGIN_ROOT`. No plugin root env var documented.
+- Copilot CLI hook format: `version:1`, `sessionStart` (camelCase), `bash`/`powershell` fields, `cwd`, `timeoutSec`
+- Hooks live in `.github/hooks/*.json`, not `hooks/hooks.json` (Claude Code format)
+- Output format for context injection: not documented; AGENTS.md is the confirmed primary fallback
+- **Decision**: Create `.github/hooks/session-start.json` (Copilot CLI format). Do NOT modify `hooks/hooks.json` (would break Claude Code).
+- **Escape hatch applied**: Per plan Notes section — "Success criterion 5b explicitly accommodates this."
 
 Fetch the Copilot CLI hooks documentation:
 Use `web_fetch` with URL: `https://docs.github.com/en/copilot/concepts/agents/coding-agent/about-hooks`
@@ -876,7 +885,9 @@ After all 9 tasks are complete, run these checks:
 - [ ] `bash -n hooks/session-start` — no syntax errors
 - [ ] `grep -rn "TodoWrite" skills/` — should return 0 results
 - [ ] `grep -n "fleet" skills/dispatching-parallel-agents/SKILL.md | wc -l` — should be 10+
-- [ ] `grep -n "COPILOT_PLUGIN_ROOT" hooks/hooks.json hooks/session-start` — should appear in both files
+- [ ] `cat .github/hooks/session-start.json | python3 -m json.tool` — valid Copilot CLI hook JSON (version:1, sessionStart)
+- [ ] `grep -n "CLAUDE_PLUGIN_ROOT" hooks/hooks.json` — Claude Code format preserved
+- [ ] `grep -n "Copilot CLI\|AGENTS.md" hooks/session-start` — Copilot CLI note present in else branch
 - [ ] `git log --oneline -9` — should show 9 clean commits
 
 ---
