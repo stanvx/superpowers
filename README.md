@@ -99,7 +99,7 @@ gemini extensions update superpowers
 Install directly from GitHub:
 
 ```bash
-/plugin install https://github.com/trentstanton/superpowers-copilot
+/plugin install https://github.com/stanvx/superpowers-copilot
 ```
 
 **Copilot CLI-specific features:**
