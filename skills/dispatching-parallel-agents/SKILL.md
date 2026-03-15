@@ -37,7 +37,7 @@ digraph when_to_use {
 ```
 
 **Use when:**
-- 3+ test files failing with different root causes
+- 2+ test files failing with different root causes
 - Multiple subsystems broken independently
 - Research and exploration across unrelated domains
 - Each problem can be understood without context from others
