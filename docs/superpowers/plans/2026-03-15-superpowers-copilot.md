@@ -640,10 +640,11 @@ Tasks 8–9: hooks wiring (with verification step) and README update.
 
 ---
 
-### Task 8: Update `hooks/hooks.json` and `hooks/session-start`
+### Task 8: Wire Copilot CLI hooks (`.github/hooks/session-start.json` and `hooks/session-start`)
 
 **Files:**
-- Modify: `hooks/hooks.json`
+- NO CHANGE: `hooks/hooks.json` (see Step 1 findings — COPILOT_PLUGIN_ROOT does not exist; changing CLAUDE_PLUGIN_ROOT would break Claude Code)
+- CREATE: `.github/hooks/session-start.json`
 - Modify: `hooks/session-start`
 
 ⚠️ **VERIFY FIRST before writing code.** The Copilot CLI hook execution environment must be checked to confirm:
@@ -677,7 +678,13 @@ If the docs are silent on the env var, add a fallback step: run `env | grep -i c
 
 ⚠️ **If the env var name differs from `COPILOT_PLUGIN_ROOT`**, you must substitute the correct name in **all three places** in this task: (a) hooks.json in Step 2, (b) the `elif` condition in session-start in Step 3, and (c) the commit message. Use search-and-replace to catch all instances.
 
-- [ ] **Step 2: Update `hooks/hooks.json`**
+- [x] **Step 2: Create `.github/hooks/session-start.json` (Copilot CLI native hook)**
+
+> Step 1 confirmed: COPILOT_PLUGIN_ROOT does not exist. `hooks/hooks.json` is NOT modified.
+> Created Copilot CLI native hook at `.github/hooks/session-start.json`:
+> ```json
+> { "version": 1, "hooks": { "sessionStart": [{ "type": "command", "bash": "hooks/session-start", "powershell": "hooks/run-hook.cmd session-start", "cwd": ".", "timeoutSec": 10 }] } }
+> ```
 
 Current content:
 ```json
@@ -791,8 +798,8 @@ Expected: `syntax OK`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add hooks/hooks.json hooks/session-start
-git commit -m "feat: wire hooks for Copilot CLI (COPILOT_PLUGIN_ROOT)
+git add .github/hooks/session-start.json hooks/session-start
+git commit -m "feat: wire hooks for Copilot CLI (.github/hooks/session-start.json)
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ```
