@@ -191,7 +191,7 @@ Code reviewer: Strengths: Solid. Issues (Important): Magic number (100) — use 
 You (to human): "Code reviewer blocked Task 2. Issues list:
   - Magic number 100 hardcoded — extract to named constant (PROGRESS_INTERVAL)"
 
-[Mark Task 2 complete]
+[Task 2 remains open — awaiting human resolution]
 
 ...
 
@@ -245,21 +245,25 @@ Done!
 - Skip scene-setting context (subagent needs to understand where task fits)
 - Ignore subagent questions (answer before letting them proceed)
 - Accept "close enough" on spec compliance (spec reviewer found issues = not done)
-- Skip review loops (reviewer found issues = implementer fixes = review again)
+- Skip spec compliance re-review (spec reviewer found issues = implementer fixes = spec reviewer re-reviews)
 - Let implementer self-review replace actual review (both are needed)
 - **Start code quality review before spec compliance is ✅** (wrong order)
-- Move to next task while either review has open issues
+- Move to next task while spec review has open issues
 
 **If subagent asks questions:**
 - Answer clearly and completely
 - Provide additional context if needed
 - Don't rush them into implementation
 
-**If reviewer finds issues:**
+**If spec reviewer finds issues:**
 - Implementer (same subagent) fixes them
-- Reviewer reviews again
+- Spec reviewer re-reviews
 - Repeat until approved
 - Don't skip the re-review
+
+**If code quality reviewer finds issues:**
+- Surface the issues list to the human — do NOT loop
+- The task is blocked; human decides next action
 
 **If subagent fails task:**
 - Dispatch fix subagent with specific instructions
