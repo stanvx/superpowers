@@ -239,7 +239,7 @@ Done!
 **Never:**
 - Start implementation on main/master branch without explicit user consent
 - Skip reviews (spec compliance OR code quality)
-- Proceed with unfixed issues
+- Proceed with unfixed spec compliance issues (mark task complete before spec review passes)
 - Dispatch multiple implementation subagents in parallel (conflicts)
 - Make subagent read plan file (provide full text instead)
 - Skip scene-setting context (subagent needs to understand where task fits)
